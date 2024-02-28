@@ -13,7 +13,7 @@ liste_echantillons = list(range(1, 11))
 
 #filtres à appliquer, peuvent être modifiés
 seuil_freq = 0.1
-seuil_profondeur = 100
+seuil_profondeur = 80
 #nombre de nucléotides d'écart maximum entre les variants à merger:
 diffmerge = 10
 
