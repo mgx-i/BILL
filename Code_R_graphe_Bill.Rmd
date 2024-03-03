@@ -1,0 +1,135 @@
+---
+title: "Tout les code R"
+author: "Bill"
+date: "2024-03-01"
+output: html_document
+---
+
+
+#Code Moyenne des mutation par stress et par passage 
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+
+#Affichage du dataframe
+print(df)
+df$Passages <- as.factor(df$Passages)
+
+
+df$Type <- as.factor(df$Type)
+
+#  données par passage et par type (chaud ou froid) et calcule du nombre total de mutations et l'écart-type
+df_summary <- df %>%
+  group_by(Passages, Type) %>%
+  summarise(Total_Mutations = mean(Mutations),
+        	SD = sd(Mutations)) # Calcul de l'écart-type
+
+# Graphique avec des barres d'erreur pour les écart-types
+ggplot(df_summary, aes(x = Passages, y = Total_Mutations, color = Type, group = Type)) +
+  geom_line() +
+  geom_errorbar(aes(ymin = Total_Mutations - SD, ymax = Total_Mutations + SD), width = 0.1) + # Ajout Des barres d'erreur
+  labs(x = "Passages", y = "Nombre total de varaitions", color = "Type") +
+  ggtitle("Nombre total de variations par passage et par type")
+
+#Teste stattistique de students pour chaque passage 
+
+# Fonction personnalisée pour effectuer le test t de Student
+custom_t_test <- function(chaud, froid) {
+  if (length(chaud) < 2 | length(froid) < 2)  # Si l'un des groupes a moins de deux observations, renvoyer NA
+    return(NA)
+  } else {         # Sinon, effectuer le test t de Student
+
+    result <- t.test(chaud, froid)
+    return(result$p.value)
+  }
+ }
+
+#On applique la fonction personnalisée à chaque passage
+passes <- unique(df$Passages)
+p_values <- sapply(passes, function(pass) {
+  df_pass <- subset(df, Passages == pass)
+  df_chaud <- subset(df_pass, Type == "Chaud")$Mutations
+  df_froid <- subset(df_pass, Type == "Froid")$Mutations
+  return(custom_t_test(df_chaud, df_froid))
+})
+print(p_values)
+
+
+```
+
+
+# Code du taux de variations en fonction du type de variants structural (DEL, INS) et des passages
+
+
+```{r }
+library(ggplot2)
+# Convertir la matrice en dataframe s'il c'est toujours en matrice
+Pmerged <- as.data.frame(Pmerged)
+
+library(ggplot2)
+
+# calcule du nombre total de variations pour chaque type_sv et passage
+variants_total <- Pmerged %>%
+  group_by(passage, type_sv) %>%  # pour regrouper les données par passage et par type_sv
+  summarise(total = n())  #compte le nombre d'observation dans chaque groupe 
+
+# Taux de variantion pour chaque type_sv et passage
+variants_total <- variants_total %>%
+  group_by(passage) %>%
+  mutate(percentage = total / sum(total))
+
+# Diagramme à barres avec ggplot
+ggplot(variants_total, aes(x = passage, y = percentage, fill = type_sv)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Proportion d'insertions et de délétions par passage",
+       x = "Passage",
+       y = "Taux de variations") +
+  scale_fill_manual(values = c("DEL" = "blue", "INS" = "pink")) +
+                    
+  theme_minimal()
+
+
+# Test de chi-square 
+
+# Chargement des bibliothèques nécessaires
+library(dplyr)
+
+# Calcul des tables de contingence pour chaque passage
+tables_contingence <- variants_total %>%
+  group_by(passage) %>%
+  summarise(INS = sum(percentage[type_sv == "INS"]),
+            DEL = sum(percentage[type_sv == "DEL"]))
+
+# Effectuer un test de chi-deux pour chaque passage
+results_chi_squared <- lapply(seq_along(tables_contingence$passage), function(i) {
+  chi_squared_test <- chisq.test(as.matrix(tables_contingence[i, -1]))
+  return(chi_squared_test)
+})
+
+# Afficher les résultats pour chaque passage
+names(results_chi_squared) <- tables_contingence$passage
+results_chi_squared
+
+
+
+
+
+```
+
+## Including Plots
+
+
+#Boxplot de la moyenne des mutation par stress et par passage
+
+```{r}
+#Affichage du dataframe
+print(df)
+df$Passages <- as.factor(df$Passages)
+df$Type <- as.factor(df$Type)
+plot(df$Mutations~df$Passages)
+
+```
+
+
