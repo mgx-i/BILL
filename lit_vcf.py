@@ -6,6 +6,8 @@
 #   un fichier Pmerged avec les variants rassemblés par position, type, échantillon et passage
 #nécessite d'être dans le même répertoire que tous les fichiers VCF avec les noms originaux
 
+from matplotlib_venn import venn2
+from matplotlib import pyplot as plt
 
 #listes des passages et échantillons à parcourir :
 liste_passages = ("P15", "P30", "P50", "P65")
@@ -31,7 +33,8 @@ fichierMerge = open("Pmerged.tsv", 'w')
 fichierBrut.write("passage\techantillon\ttype_stress\tposition\tseq_reference\tseq_alternative\ttype_sv\tfrequence\tprofondeur\n")
 fichierMerge.write("passage\techantillon\ttype_stress\tposition\ttype_sv\tfrequence\tprofondeur\n")
 
-
+#Dictionnaire pour les diagrammes de Venn : 
+Dsets = {}
 
 
 #écrit un variant dans le fichier donné, ne retourne rien
@@ -91,6 +94,11 @@ for nom_passage in liste_passages :
     DtoutINS[nom_passage] = {}
     DtoutDEL[nom_passage] = {}
     Dmerged[nom_passage] = {}
+
+    #initie les set par passage pour les diagrammes de Venn
+    set_froid = set()
+    set_chaud = set()
+    Dsets[nom_passage] = {'set froid' : set_froid, 'set chaud' : set_chaud}
 
     for num_echantillon in liste_echantillons :
         #crée les dictionnaires de l'échantillon :
@@ -153,10 +161,37 @@ for nom_passage in liste_passages :
         for pos in Dmerged[nom_passage][num_echantillon] :
             for var in Dmerged[nom_passage][num_echantillon][pos] :
                 ecritVariant(var, fichierMerge)
+    
 
-
+        #remplit les set pour les diagrammes de Venn
+        for _, item in Dmerged[nom_passage][num_echantillon].items() :
+            if num_echantillon < 6 :
+                for v in item :
+                    set_froid.add((v['position'], v['type_sv']))
+            else :
+                for v in item :
+                    set_chaud.add((v['position'], v['type_sv']))
+    #dans la boucle passage
 
 
 #fermeture du fichier de sortie:
 fichierBrut.close()
 fichierMerge.close()
+
+
+
+
+#création de diagrammes de Venn
+
+for nom_passage in liste_passages :
+    legende_chaud = nom_passage + ' chaud'
+    legende_froid = nom_passage + ' froid'
+    venn2(subsets = [Dsets[nom_passage]['set chaud'], Dsets[nom_passage]['set froid']], set_labels = (legende_chaud, legende_froid)),
+
+    nomdiag = nom_passage + '.png'
+    plt.savefig(nomdiag)
+    plt.close()
+
+
+
+
